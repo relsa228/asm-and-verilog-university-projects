@@ -6,16 +6,26 @@ a   dw   0
 b   dw   0
 c   dw   0
 d   dw   0
+check dw 99
 max   dw   0
 result   dw   0
 
-;xuinya
 enterA db 'Enter a: $'
 enterB db 'Enter b: $'
 enterC db 'Enter c: $'
 enterDD db 'Enter d: $'
 outResult db 'Result: $'
-errorMessage db 'Input error! Try again.'
+errorMessage db 'Input error! Try again.$'
+overflowReportPow2a db 'Overflow in a^2$'
+overflowReportPow3a db 'Overflow in a^3$'
+overflowReportPow4a db 'Overflow in a^4$'
+overflowReportMulCB db 'Overflow in c*b$'
+overflowReportDivDB db 'Overflow in d/b$'
+overflowReportSub db 'Overflow in pow(a,2)-b$'
+overflowReportDiv1 db 'Overflow in max(a,b,c)/(pow(a,2)-b)$'
+overflowReportPowC2 db 'Overflow in c^2$'
+overflowReportPowC3 db 'Overflow in c^3$'
+overflowReportAdd db 'Overflow in c^3 + b$'
 indent  db '', 0Dh, 0Ah, '$'
 
 parA label byte
@@ -37,7 +47,6 @@ parD label byte
 maxlenD db 10
 actlenD db ?
 fldD db 10 dup('$')
-;xuinya
 
 data ends
 
@@ -45,14 +54,22 @@ code segment
 assume cs:code, ds:data
 
 outInt2 proc near
-    aam 
-    add ax,3030h 
-    mov dl,ah 
-    mov dh,al 
-    mov ah,02 
-    int 21h 
-    mov dl,dh 
-    int 21h
+    xor     cx, cx
+    mov     bx, 10
+oi2:
+    xor     dx,dx
+    div     bx
+    push    dx
+    inc     cx
+    test    ax, ax
+    jnz     oi2
+    mov     ah, 02h
+oi3:
+    pop     dx
+    add     dl, '0'
+    int     21h
+    loop    oi3
+    ret
 outInt2 endp
 
 makeIntend proc near
@@ -64,26 +81,33 @@ makeIntend endp
 
 enterNum proc near
     mov di, 0           
-    mov cx, [bx]            ;в CX количество введенных символов
+    mov cx, [bx]                                       ;в CX количество введенных символов
     xor ch, ch
-    mov si, 1               ;в SI множитель 
+    mov si, 1                                          ;в SI множитель 
     @loopMet:
-    push si                 ;сохраняем SI (множитель) в стеке
-    mov si, cx              ;в SI помещаем номер текущего символа 
-    mov ax, [bx+si]         ;в AX помещаем текущий символ 
+    push si                                            ;сохраняем SI (множитель) в стеке
+    mov si, cx                                         ;в SI помещаем номер текущего символа 
+    mov ax, [bx+si]                                    ;в AX помещаем текущий символ 
     xor ah, ah
-    pop si                  ;извлекаем множитель (SI)из стека
-    sub ax, 30h             ;получаем из символа (AX) цифру
-    mul si                  ;умножаем цифру (AX)на множитель (SI)
-    add di, ax              ;складываем с результирующим числом
-    mov ax, si              ;помещаем множитель (SI) в AX
+    pop si                                             ;извлекаем множитель (SI) из стека
+    sub ax, 30h                                        ;получаем из символа (AX) цифру
+    mul si                                             ;умножаем цифру (AX) на множитель (SI)
+    add di, ax                                         ;складываем с результирующим числом
+    mov ax, si                                         ;помещаем множитель (SI) в AX
     mov dx, 10
-    mul dx                  ;увеличиваем множитель (AX) в 10 раз
-    mov si, ax              ;перемещаем множитель (AX) назад в SI
-    loop @loopMet                ;переходим к предыдущему символу
+    mul dx                                             ;увеличиваем множитель (AX) в 10 раз
+    mov si, ax                                         ;перемещаем множитель (AX) назад в SI
+    loop @loopMet                                      ;переходим к предыдущему символу
     call makeIntend
     ret
 enterNum endp
+
+overflow proc near
+    mov ah, 09
+    int 21h
+    mov ah, 4ch
+    int   21h
+overflow endp
 
 start:
         mov ax, data
@@ -98,13 +122,14 @@ start:
         lea bx, parA+1                                  ;в BX адрес второго элемента буфера
         call enterNum
         mov a, di
-        jmp @firstTry
+        jmp @firstTryB
 
-        @errorInput:                                       ;вводим d 
+        @errorInput:                                    ;Обработка исключения
         lea dx, errorMessage
         mov ah, 09
         int 21h
-        @firstTry:
+        call makeIntend
+        @firstTryB:
         lea dx, enterB                                  ;вводим b   
         mov ah, 09
         int 21h
@@ -145,22 +170,62 @@ start:
 
         mov ax, a
         imul a
+        jc @overflowPow2a              
+        jnc @notOverflowPow2a   
+
+        @overflowPow2a:                                 ;Overflow in a^2
+        lea dx, overflowReportPow2a
+        call overflow
+
+        @notOverflowPow2a:                  
         imul a
-        imul a              
+        jc @overflowPow3a    
+        jnc @notOverflowPow3a  
+
+        @overflowPow3a:                                 ;Overflow in a^3
+        lea dx, overflowReportPow3a
+        call overflow
+
+        @notOverflowPow3a:                             
+        imul a           
+        jc @overflowPow4a 
+        jnc @notOverflowPow4a
+
+        @overflowPow4a:                                 ;Overflow in a^4
+        lea dx, overflowReportPow4a
+        call overflow                                 
+
+        @notOverflowPow4a:
         mov bx, b
         cmp ax, bx                                      ; первое сравнение (pow(a,4)>b)
         jg @biggerFirstCMP
-        jle @notBiggerFirstCMP
+        jle @midP
 
         @biggerFirstCMP:                                ; первая ветка первого сравнения  (pow(a,4)>b)
             mov ax, c
             imul b
+            jc @overflowMulCB 
+            jnc @notOverflowMulCB 
+
+            @OverflowMulCB:                             ;Overflow in c*b
+            lea dx, overflowReportMulCB
+            call overflow 
+
+            @notOverflowMulCB:                            
             mov bx, ax
             mov ax, d
             idiv b
+            jc @overflowDivDB
+            jnc @notOverflowDivDB
+            
+            @overflowDivDB:                             ;Overflow in d/b (lol)
+            lea dx, overflowReportDivDB
+            call overflow
+            
+            @notOverflowDivDB:                            
             cmp ax, bx                                  ; второе сравнение (c*b==d/b)
             je @equalSecondCMP
-            jle @notEqualSecondCMPStart
+            jle @midP
 
                 @equalSecondCMP:                        ; первая ветка второго сравнения (c*b==d/b)
                     mov ax, a
@@ -176,7 +241,8 @@ start:
                     jge @biggerOrEqualMaxF
                     jl @smallerMaxF
 
-
+                    @midP:
+                        jmp @notBiggerFirstCMP
                     .findMax:                           ; поиск максисмального (сравнение а и b)
 
                     @biggerOrEqualMaxF:                 ; если а >= b - первая ветка
@@ -212,28 +278,67 @@ start:
 
                 @notEqualSecondCMPEnd:                  ; конец второй ветки второго сравнения (c*b!=d/b)
                     mov ax, a
-                    imul a
+                    imul a                                 
                     sub ax, b
+                    jc @overflowSubAB
+                    jnc @notOverflowSubAB
+                    
+                    @OverflowSubAB:
+                    lea dx, overflowReportSub
+                    call overflow
+                    
+                    @notOverflowSubAB:               
                     mov bx, ax
                     mov ax, max
                     idiv bx
+                    jc @overflowDiv1
+                    jnc @notOverflowDiv1
+                    
+                    @overflowDiv1:
+                    lea dx, overflowReportDiv1
+                    call overflow
+                    
+                    @notOverflowDiv1:
                     mov result, ax
                     jmp @exit                          ; result = max(a,b,c)/(pow(a,2)-b)
 
         @notBiggerFirstCMP:                            ; вторая ветка первого сравнения (pow(a,4)<=b)
             mov ax, c
             imul c
+            jc @overflowPow2C
+            jnc @notOverflowPow2C
+
+            @overflowPow2C:
+            lea dx, overflowReportPowC2
+            call overflow
+
+            @notOverflowPow2C:                       
             imul c
+            jc @overflowPow3C     
+            jnc @notOverflowPow3C
+
+            @overflowPow3C:
+            lea dx, overflowReportPowC3
+            call overflow
+                            
+            @notOverflowPow3C:                             
             mov bx, b
             add ax, bx
-            mov result, ax
-            jmp @exit                                  ; result = pow(c,3) + b
+            jo @overflowAdd
+            jno @notOverflowAdd
+
+            @overflowAdd:
+            lea dx, overflowReportAdd
+            call overflow
+            
+            @notOverflowAdd:                                   
+            mov result, ax                                 ; result = pow(c,3) + b
 
     @exit:
-        mov ax, result
         lea dx, outResult                                  
         mov ah, 09
         int 21h
+        mov ax, result
         call outInt2
         mov ah, 4ch
         int   21h
