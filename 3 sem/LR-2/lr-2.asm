@@ -6,7 +6,6 @@ a   dw   0
 b   dw   0
 c   dw   0
 d   dw   0
-check dw 99
 max   dw   0
 result   dw   0
 
@@ -54,6 +53,15 @@ code segment
 assume cs:code, ds:data
 
 outInt2 proc near
+test    ax, ax
+   jns     oi1
+   mov  cx, ax
+   mov     ah, 02h
+   mov     dl, '-'
+   int     21h
+   mov  ax, cx
+   neg     ax
+oi1:  
     xor     cx, cx
     mov     bx, 10
 oi2:
@@ -112,7 +120,14 @@ overflow endp
 start:
         mov ax, data
         mov ds, ax
+        jmp @firstTryA
         
+        @errorInputA:                                    ;Обработка исключения
+        lea dx, errorMessage
+        mov ah, 09
+        int 21h
+        call makeIntend
+        @firstTryA:
         lea dx, enterA                                  ;вводим а   
         mov ah, 09
         int 21h
@@ -122,9 +137,10 @@ start:
         lea bx, parA+1                                  ;в BX адрес второго элемента буфера
         call enterNum
         mov a, di
+        jo @errorInputA
         jmp @firstTryB
 
-        @errorInput:                                    ;Обработка исключения
+        @errorInputB:                                    ;Обработка исключения
         lea dx, errorMessage
         mov ah, 09
         int 21h
@@ -139,15 +155,23 @@ start:
         lea bx, parB+1                                  
         call enterNum
         mov b, di
+        jo @errorInputB
         mov ax, b
         cmp ax, 0
-        je @errorInput
+        je @errorInputB
         mov ax, a
         mul ax
         mov bx, b
         cmp ax, bx
-        je @errorInput
+        je @errorInputB
+        jmp @firstTryC
 
+        @errorInputC:                                    ;Обработка исключения
+        lea dx, errorMessage
+        mov ah, 09
+        int 21h
+        call makeIntend
+        @firstTryC:
         lea dx, enterC                                  ;вводим c   
         mov ah, 09
         int 21h
@@ -157,7 +181,15 @@ start:
         lea bx, parC+1                                  
         call enterNum
         mov c, di
+        jo @errorInputC
+        jmp @firstTryD
 
+        @errorInputD:                                    ;Обработка исключения
+        lea dx, errorMessage
+        mov ah, 09
+        int 21h
+        call makeIntend
+        @firstTryD:
         lea dx, enterDD   
         mov ah, 09                                 
         int 21h
@@ -167,11 +199,12 @@ start:
         lea bx, parD+1  
         call enterNum
         mov d, di
+        jo @errorInputD
 
         mov ax, a
         imul a
-        jc @overflowPow2a              
-        jnc @notOverflowPow2a   
+        jo @overflowPow2a              
+        jno @notOverflowPow2a   
 
         @overflowPow2a:                                 ;Overflow in a^2
         lea dx, overflowReportPow2a
@@ -179,8 +212,8 @@ start:
 
         @notOverflowPow2a:                  
         imul a
-        jc @overflowPow3a    
-        jnc @notOverflowPow3a  
+        jo @overflowPow3a    
+        jno @notOverflowPow3a  
 
         @overflowPow3a:                                 ;Overflow in a^3
         lea dx, overflowReportPow3a
@@ -188,8 +221,8 @@ start:
 
         @notOverflowPow3a:                             
         imul a           
-        jc @overflowPow4a 
-        jnc @notOverflowPow4a
+        jo @overflowPow4a 
+        jno @notOverflowPow4a
 
         @overflowPow4a:                                 ;Overflow in a^4
         lea dx, overflowReportPow4a
@@ -204,8 +237,8 @@ start:
         @biggerFirstCMP:                                ; первая ветка первого сравнения  (pow(a,4)>b)
             mov ax, c
             imul b
-            jc @overflowMulCB 
-            jnc @notOverflowMulCB 
+            jo @overflowMulCB 
+            jno @notOverflowMulCB 
 
             @OverflowMulCB:                             ;Overflow in c*b
             lea dx, overflowReportMulCB
@@ -215,8 +248,8 @@ start:
             mov bx, ax
             mov ax, d
             idiv b
-            jc @overflowDivDB
-            jnc @notOverflowDivDB
+            jo @overflowDivDB
+            jno @notOverflowDivDB
             
             @overflowDivDB:                             ;Overflow in d/b (lol)
             lea dx, overflowReportDivDB
@@ -280,8 +313,8 @@ start:
                     mov ax, a
                     imul a                                 
                     sub ax, b
-                    jc @overflowSubAB
-                    jnc @notOverflowSubAB
+                    jo @overflowSubAB
+                    jno @notOverflowSubAB
                     
                     @OverflowSubAB:
                     lea dx, overflowReportSub
@@ -291,8 +324,8 @@ start:
                     mov bx, ax
                     mov ax, max
                     idiv bx
-                    jc @overflowDiv1
-                    jnc @notOverflowDiv1
+                    jo @overflowDiv1
+                    jno @notOverflowDiv1
                     
                     @overflowDiv1:
                     lea dx, overflowReportDiv1
@@ -305,8 +338,8 @@ start:
         @notBiggerFirstCMP:                            ; вторая ветка первого сравнения (pow(a,4)<=b)
             mov ax, c
             imul c
-            jc @overflowPow2C
-            jnc @notOverflowPow2C
+            jo @overflowPow2C
+            jno @notOverflowPow2C
 
             @overflowPow2C:
             lea dx, overflowReportPowC2
@@ -314,8 +347,8 @@ start:
 
             @notOverflowPow2C:                       
             imul c
-            jc @overflowPow3C     
-            jnc @notOverflowPow3C
+            jo @overflowPow3C     
+            jno @notOverflowPow3C
 
             @overflowPow3C:
             lea dx, overflowReportPowC3
