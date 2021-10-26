@@ -89,27 +89,28 @@ makeIntend endp
 
 enterNum proc near
     mov di, 0           
-    mov cx, [bx]                                       ;в CX количество введенных символов
+    mov cx, [bx]                                       
     xor ch, ch
-    mov si, 1                                          ;в SI множитель 
+    mov si, 1                                           
 
     @loopMet:
-    push si                                            ;сохраняем SI (множитель) в стеке
-    mov si, cx                                         ;в SI помещаем номер текущего символа 
+    push si                                            
+    mov si, cx                                          
     cmp cx,1
     je @Signed
     @NoSigned:
-    mov ax, [bx+si]                                    ;в AX помещаем текущий символ 
+    mov ax, [bx+si]                                     
     xor ah, ah
-    pop si                                             ;извлекаем множитель (SI) из стека
-    sub ax, 30h                                        ;получаем из символа (AX) цифру
-    mul si                                             ;умножаем цифру (AX) на множитель (SI)
-    add di, ax                                         ;складываем с результирующим числом
-    mov ax, si                                         ;помещаем множитель (SI) в AX
+    pop si                                             
+    sub ax, 30h                                        
+    mul si                                            
+    add di, ax                                         
+    mov ax, si                                        
     mov dx, 10
-    mul dx                                             ;увеличиваем множитель (AX) в 10 раз
-    mov si, ax                                         ;перемещаем множитель (AX) назад в SI
-    loop @loopMet                                      ;переходим к предыдущему символу
+    mul dx                                             
+    mov si, ax                                         
+    loop @loopMet  
+                                       
     @return:
     call makeIntend
     ret
@@ -137,31 +138,31 @@ start:
         mov ds, ax
         jmp @firstTryA
         
-        @errorInputA:                                    ;Обработка исключения
+        @errorInputA:                                    
         lea dx, errorMessage
         mov ah, 09
         int 21h
         call makeIntend
         @firstTryA:
-        lea dx, enterA                                  ;вводим а   
+        lea dx, enterA                                    
         mov ah, 09
         int 21h
         lea dx, parA
         mov ah, 0Ah
         int 21h
-        lea bx, parA+1                                  ;в BX адрес второго элемента буфера
+        lea bx, parA+1                                 
         call enterNum
         mov a, di
         jo @errorInputA
         jmp @firstTryB
 
-        @errorInputB:                                    ;Обработка исключения
+        @errorInputB:                                    
         lea dx, errorMessage
         mov ah, 09
         int 21h
         call makeIntend
         @firstTryB:
-        lea dx, enterB                                  ;вводим b   
+        lea dx, enterB                                    
         mov ah, 09
         int 21h
         lea dx, parB
@@ -181,13 +182,13 @@ start:
         je @errorInputB
         jmp @firstTryC
 
-        @errorInputC:                                    ;Обработка исключения
+        @errorInputC:                                    
         lea dx, errorMessage
         mov ah, 09
         int 21h
         call makeIntend
         @firstTryC:
-        lea dx, enterC                                  ;вводим c   
+        lea dx, enterC                                   
         mov ah, 09
         int 21h
         lea dx, parC
@@ -199,7 +200,7 @@ start:
         jo @errorInputC
         jmp @firstTryD
 
-        @errorInputD:                                    ;Обработка исключения
+        @errorInputD:                                   
         lea dx, errorMessage
         mov ah, 09
         int 21h
@@ -221,7 +222,7 @@ start:
         jo @overflowPow2a              
         jno @notOverflowPow2a   
 
-        @overflowPow2a:                                 ;Overflow in a^2
+        @overflowPow2a:                                 
         lea dx, overflowReportPow2a
         call overflow
 
@@ -230,7 +231,7 @@ start:
         jo @overflowPow3a    
         jno @notOverflowPow3a  
 
-        @overflowPow3a:                                 ;Overflow in a^3
+        @overflowPow3a:                                 
         lea dx, overflowReportPow3a
         call overflow
 
@@ -239,23 +240,23 @@ start:
         jo @overflowPow4a 
         jno @notOverflowPow4a
 
-        @overflowPow4a:                                 ;Overflow in a^4
+        @overflowPow4a:                                 
         lea dx, overflowReportPow4a
         call overflow                                 
 
         @notOverflowPow4a:
         mov bx, b
-        cmp ax, bx                                      ; первое сравнение (pow(a,4)>b)
+        cmp ax, bx                                      
         jg @biggerFirstCMP
         jle @midP
 
-        @biggerFirstCMP:                                ; первая ветка первого сравнения  (pow(a,4)>b)
+        @biggerFirstCMP:                                
             mov ax, c
             imul b
             jo @overflowMulCB 
             jno @notOverflowMulCB 
 
-            @OverflowMulCB:                             ;Overflow in c*b
+            @OverflowMulCB:                             
             lea dx, overflowReportMulCB
             call overflow 
 
@@ -266,23 +267,23 @@ start:
             jo @overflowDivDB
             jno @notOverflowDivDB
             
-            @overflowDivDB:                             ;Overflow in d/b (lol)
+            @overflowDivDB:                             
             lea dx, overflowReportDivDB
             call overflow
             
             @notOverflowDivDB:                            
-            cmp ax, bx                                  ; второе сравнение (c*b==d/b)
+            cmp ax, bx                                  
             je @equalSecondCMP
             jle @midP
 
-                @equalSecondCMP:                        ; первая ветка второго сравнения (c*b==d/b)
+                @equalSecondCMP:                        
                     mov ax, a
                     mov bx, b
                     or ax, bx
                     mov result, ax
-                    jmp @exit                           ; result = a OR b
+                    jmp @exit                           
 
-                @notEqualSecondCMPStart:                ; начало второй ветки второго сравнения (c*b!=d/b)
+                @notEqualSecondCMPStart:                
                     mov ax, a
                     mov bx, b
                     cmp ax, bx            
@@ -291,40 +292,40 @@ start:
 
                     @midP:
                         jmp @notBiggerFirstCMP
-                    .findMax:                           ; поиск максисмального (сравнение а и b)
+                    .findMax:                           
 
-                    @biggerOrEqualMaxF:                 ; если а >= b - первая ветка
+                    @biggerOrEqualMaxF:                 
                         mov bx, c
                         cmp ax, bx
                         jge @biggerOrEqualMaxS
                         jl @smallerMaxS
 
-                    @biggerOrEqualMaxS:                 ; если а >= c    => max = a (первая ветка)
+                    @biggerOrEqualMaxS:                 
                         mov max, ax
                         jmp @notEqualSecondCMPEnd
 
-                    @smallerMaxS:                       ; если а < c    => max = c (первая ветка)
+                    @smallerMaxS:                       
                         mov max, bx
                         jmp @notEqualSecondCMPEnd
 
-                    @smallerMaxF:                       ; если а <= b - вторая ветка
+                    @smallerMaxF:                      
                         mov ax, c
                         cmp bx, ax
                         jge @biggerOrEqualMaxT
                         jl @smallerMaxT
 
-                    @biggerOrEqualMaxT:                 ; если b >= c    => max = b (первая вторая)
+                    @biggerOrEqualMaxT:                
                         mov max, bx
                         jmp @notEqualSecondCMPEnd
 
-                    @smallerMaxT:                       ; если b < c    => max = c (первая вторая)
+                    @smallerMaxT:                      
                         mov max, ax
                         jmp @notEqualSecondCMPEnd
 
                     .findMaxEnd:
 
 
-                @notEqualSecondCMPEnd:                  ; конец второй ветки второго сравнения (c*b!=d/b)
+                @notEqualSecondCMPEnd:                  
                     mov ax, a
                     imul a                                 
                     sub ax, b
@@ -348,9 +349,9 @@ start:
                     
                     @notOverflowDiv1:
                     mov result, ax
-                    jmp @exit                          ; result = max(a,b,c)/(pow(a,2)-b)
+                    jmp @exit                          
 
-        @notBiggerFirstCMP:                            ; вторая ветка первого сравнения (pow(a,4)<=b)
+        @notBiggerFirstCMP:                            
             mov ax, c
             imul c
             jo @overflowPow2C
@@ -380,7 +381,7 @@ start:
             call overflow
             
             @notOverflowAdd:                                   
-            mov result, ax                                 ; result = pow(c,3) + b
+            mov result, ax                                 
 
     @exit:
         lea dx, outResult                                  
