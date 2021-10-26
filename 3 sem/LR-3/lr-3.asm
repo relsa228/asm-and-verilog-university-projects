@@ -88,6 +88,7 @@ makeIntend proc near
 makeIntend endp
 
 enterNum proc near
+    @ifError:
     mov di, 0           
     mov cx, [bx]                                       
     xor ch, ch
@@ -95,22 +96,22 @@ enterNum proc near
 
     @loopMet:
     push si                                            
-    mov si, cx                                          
+    mov si, cx                                         
     cmp cx,1
     je @Signed
     @NoSigned:
-    mov ax, [bx+si]                                     
+    mov ax, [bx+si]                                    
     xor ah, ah
     pop si                                             
     sub ax, 30h                                        
-    mul si                                            
+    mul si                                             
     add di, ax                                         
-    mov ax, si                                        
+    mov ax, si                                         
     mov dx, 10
     mul dx                                             
-    mov si, ax                                         
-    loop @loopMet  
-                                       
+    mov si, ax    
+    jo @Error                                     
+    loop @loopMet                                      
     @return:
     call makeIntend
     ret
@@ -124,6 +125,11 @@ enterNum proc near
     neg di
     pop si
     jmp @return
+
+    @Error:
+    call makeIntend
+    mov error, 1
+    ret
 enterNum endp
 
 overflow proc near
