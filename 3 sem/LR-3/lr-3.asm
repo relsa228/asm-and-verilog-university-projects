@@ -7,6 +7,7 @@ b   dw   0
 c   dw   0
 d   dw   0
 max   dw   0
+error   dw   0
 result   dw   0
 
 enterA db 'Enter a: $'
@@ -28,24 +29,24 @@ overflowReportAdd db 'Overflow in c^3 + b$'
 indent  db '', 0Dh, 0Ah, '$'
 
 parA label byte
-maxlenA db 10
+maxlenA db 20
 actlenA db ?
-fldA db 10 dup('$')
+fldA db 20 dup('$')
 
 parB label byte
-maxlenB db 10
+maxlenB db 20
 actlenB db ?
-fldB db 10 dup('$')
+fldB db 20 dup('$')
 
 parC label byte
-maxlenC db 10
+maxlenC db 20
 actlenC db ?
-fldC db 10 dup('$')
+fldC db 20 dup('$')
 
 parD label byte
-maxlenD db 10
+maxlenD db 20
 actlenD db ?
-fldD db 10 dup('$')
+fldD db 20 dup('$')
 
 data ends
 
@@ -88,20 +89,26 @@ makeIntend proc near
 makeIntend endp
 
 enterNum proc near
-    @ifError:
     mov di, 0           
     mov cx, [bx]                                       
     xor ch, ch
     mov si, 1                                           
 
     @loopMet:
+
     push si                                            
     mov si, cx                                         
     cmp cx,1
     je @Signed
     @NoSigned:
-    mov ax, [bx+si]                                    
-    xor ah, ah
+    mov ax, [bx+si]
+    xor ah, ah   
+
+    cmp al, 30h
+    jb @Error
+    cmp al, 39h
+    ja @Error
+
     pop si                                             
     sub ax, 30h                                        
     mul si                                             
@@ -110,11 +117,13 @@ enterNum proc near
     mov dx, 10
     mul dx                                             
     mov si, ax    
-    jo @Error                                     
+    ;jo @Error                                     
     loop @loopMet                                      
+    
     @return:
     call makeIntend
     ret
+
     @Signed:
     push dx
     mov dx,[bx+si]
@@ -127,9 +136,9 @@ enterNum proc near
     jmp @return
 
     @Error:
-    call makeIntend
     mov error, 1
-    ret
+    pop cx
+    jmp @return
 enterNum endp
 
 overflow proc near
@@ -144,25 +153,27 @@ start:
         mov ds, ax
         jmp @firstTryA
         
-        @errorInputA:                                    
+        @errorInputA: 
+        mov error, 0                                 
         lea dx, errorMessage
         mov ah, 09
         int 21h
         call makeIntend
         @firstTryA:
-        lea dx, enterA                                    
+        lea dx, enterA                                     
         mov ah, 09
         int 21h
         lea dx, parA
         mov ah, 0Ah
         int 21h
-        lea bx, parA+1                                 
+        lea bx, parA+1                                  
         call enterNum
-        mov a, di
-        jo @errorInputA
+        cmp error, 1
+        je @errorInputA
         jmp @firstTryB
 
-        @errorInputB:                                    
+        @errorInputB: 
+        mov error, 0                                    
         lea dx, errorMessage
         mov ah, 09
         int 21h
@@ -177,7 +188,8 @@ start:
         lea bx, parB+1                                  
         call enterNum
         mov b, di
-        jo @errorInputB
+        cmp error, 1
+        je @errorInputB
         mov ax, b
         cmp ax, 0
         je @errorInputB
@@ -188,7 +200,8 @@ start:
         je @errorInputB
         jmp @firstTryC
 
-        @errorInputC:                                    
+        @errorInputC:
+        mov error, 0                                     
         lea dx, errorMessage
         mov ah, 09
         int 21h
@@ -203,10 +216,12 @@ start:
         lea bx, parC+1                                  
         call enterNum
         mov c, di
-        jo @errorInputC
+        cmp error, 1
+        je @errorInputC
         jmp @firstTryD
 
-        @errorInputD:                                   
+        @errorInputD: 
+        mov error, 0                                   
         lea dx, errorMessage
         mov ah, 09
         int 21h
@@ -221,7 +236,8 @@ start:
         lea bx, parD+1  
         call enterNum
         mov d, di
-        jo @errorInputD
+        cmp error, 1
+        je @errorInputD
 
         mov ax, a
         imul a
@@ -266,10 +282,12 @@ start:
             lea dx, overflowReportMulCB
             call overflow 
 
-            @notOverflowMulCB:                            
+            @notOverflowMulCB:     
             mov bx, ax
             mov ax, d
+            xor dx, dx
             idiv b
+            
             jo @overflowDivDB
             jno @notOverflowDivDB
             
@@ -280,7 +298,7 @@ start:
             @notOverflowDivDB:                            
             cmp ax, bx                                  
             je @equalSecondCMP
-            jle @midP
+            jne @notEqualSecondCMPStart
 
                 @equalSecondCMP:                        
                     mov ax, a
@@ -345,6 +363,7 @@ start:
                     @notOverflowSubAB:               
                     mov bx, ax
                     mov ax, max
+                    xor dx, dx
                     idiv bx
                     jo @overflowDiv1
                     jno @notOverflowDiv1
