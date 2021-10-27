@@ -168,6 +168,7 @@ start:
         int 21h
         lea bx, parA+1                                  
         call enterNum
+        mov a, di
         cmp error, 1
         je @errorInputA
         jmp @firstTryB
@@ -241,8 +242,8 @@ start:
 
         mov ax, a
         imul a
-        jo @overflowPow2a              
-        jno @notOverflowPow2a   
+        jc @overflowPow2a              
+        jnc @notOverflowPow2a   
 
         @overflowPow2a:                                 
         lea dx, overflowReportPow2a
