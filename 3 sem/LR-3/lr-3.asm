@@ -29,24 +29,24 @@ overflowReportAdd db 'Overflow in c^3 + b$'
 indent  db '', 0Dh, 0Ah, '$'
 
 parA label byte
-maxlenA db 20
+maxlenA db 30
 actlenA db ?
-fldA db 20 dup('$')
+fldA db 30 dup('$')
 
 parB label byte
-maxlenB db 20
+maxlenB db 30
 actlenB db ?
-fldB db 20 dup('$')
+fldB db 30 dup('$')
 
 parC label byte
-maxlenC db 20
+maxlenC db 30
 actlenC db ?
-fldC db 20 dup('$')
+fldC db 30 dup('$')
 
 parD label byte
-maxlenD db 20
+maxlenD db 30
 actlenD db ?
-fldD db 20 dup('$')
+fldD db 30 dup('$')
 
 data ends
 
@@ -353,7 +353,7 @@ start:
                     mov ax, a
                     imul a                                 
                     sub ax, b
-                    jo @overflowSubAB
+                    jc @overflowSubAB
                     jno @notOverflowSubAB
                     
                     @OverflowSubAB:
