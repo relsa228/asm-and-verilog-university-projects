@@ -111,13 +111,13 @@ enterNum proc near
 
     pop si                                             
     sub ax, 30h                                        
-    mul si                                             
-    add di, ax                                         
+    mul si        
+    jo @Overflow                       
+    add di, ax                                
     mov ax, si                                         
     mov dx, 10
-    mul dx                                             
-    mov si, ax    
-    ;jo @Error                                     
+    mul dx                                          
+    mov si, ax                       
     loop @loopMet                                      
     
     @return:
@@ -138,6 +138,10 @@ enterNum proc near
     @Error:
     mov error, 1
     pop cx
+    jmp @return
+
+    @Overflow:
+    mov error, 1
     jmp @return
 enterNum endp
 
