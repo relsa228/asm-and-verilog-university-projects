@@ -39,7 +39,6 @@ ret
 dec di
 mov ax, 1
 ret
-
 findVowels endp
 
 
@@ -59,7 +58,6 @@ ret
 dec di
 mov ax, 1
 ret
-
 findConsonants endp
 
 
@@ -154,10 +152,10 @@ taskProc endp
 
 
 makeIntend proc near
-    lea dx, indent
-    mov ah, 09
-    int 21h
-    ret
+lea dx, indent
+mov ah, 09
+int 21h
+ret
 makeIntend endp
 
 
@@ -177,8 +175,11 @@ int 21h
 call taskProc
 call makeIntend
 
-lea dx, result
+lea dx, resultStr
 mov ah, 09
+int 21h
+
+lea dx, result
 int 21h
 
 mov ah, 4ch
