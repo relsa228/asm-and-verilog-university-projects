@@ -94,6 +94,9 @@ mov cx, cxBuff
 cmp ax, 1
 je @consonants
 
+cmp al, ''''
+je @apos
+
 mov al, fldStr[si]
 cmp al, ' '
 je @space
@@ -134,6 +137,12 @@ mov al, fldStr[si]
 mov result[bp], al
 inc bp
 inc di
+jmp @end
+
+@apos:
+mov al, fldStr[si]
+mov result[bp], al
+inc bp
 jmp @end
 
 @space:
