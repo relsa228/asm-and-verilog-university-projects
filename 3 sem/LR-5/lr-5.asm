@@ -200,7 +200,7 @@ jmp @taskLoop
     mov di, buffDIF
     mov dx, [di]
     imul dx
-    jo @overflowLoop
+    jc @overflowLoop
     mov result, ax
 
     mov ax, colCount
